@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kami.blog.dao.UserDao">
+    <!-- User的resultMap,column是给数据库列起的别名,它对应property类的属性-->
+    <resultMap id="result_User_Map" type="com.kami.blog.model.User">
+        <id column="id" jdbcType="VARCHAR" property="id" />
+        <result column="password" jdbcType="VARCHAR" property="password" />
+        <result column="headImg" jdbcType="VARCHAR" property="headImg" />
+        <result column="createTime" jdbcType="DATE" property="createTime" />
+        <result column="name" jdbcType="VARCHAR" property="name" />
+        <result column="black" jdbcType="TINYINT" property="black" />
+        <result column="admin" jdbcType="TINYINT" property="admin" />
+        <result column="active" jdbcType="TINYINT" property="active" />
+        <result column="email" jdbcType="VARCHAR" property="email" />
+        <result column="introduction" jdbcType="VARCHAR" property="introduction" />
+    </resultMap>
+
+	<!-- Assist用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="Assist">
+        <where>
+            <foreach collection="require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+	   <!-- updateAssist用于更新数据的使用它拓展自Assist,用于辅助工具类setRequires设置的条件,${req.require}表示列名,#{req.value}表示值它是防SQL注入的 -->
+    <sql id="updateAssist">
+        <where>
+            <foreach collection="assist.require" item="req" separator=" ">
+                ${req.require} 
+                <if test="req.value != null"> #{req.value}</if> 
+                <if test="req.values != null">
+                    <foreach collection="req.values" item="val" separator=","> 
+                        #{val} 
+                    </foreach> 
+                </if> 
+                <if test="req.suffix != null"> ${req.suffix}</if> 
+            </foreach>
+        </where>
+    </sql>
+
+    <!-- 数据库中表名为:user的列名,as前是数据库的列明,as后是列的别名用于映射成实体类中的属性,需要注意的是别名必须与resultMap中的column别名一致 -->
+    <sql id="user_Column">
+        user.id as id
+        ,user.password as password
+        ,user.headImg as headImg
+        ,user.createTime as createTime
+        ,user.name as name
+        ,user.black as black
+        ,user.admin as admin
+        ,user.active as active
+        ,user.email as email
+        ,user.introduction as introduction
+    </sql>
+
+    <!--获得类名为:User对应的数据库表的数据总行数 -->
+    <select id="getUserRowCount" parameterType="com.kami.blog.common.Assist" resultType="java.lang.Long">
+        select count(id) from user
+        <if test="require!=null"><include refid="Assist" /></if>
+    </select>
+    <!-- 获得类名为:User对应数据库中表的数据集合 -->
+    <select id="selectUser" parameterType="com.kami.blog.common.Assist"  resultMap="result_User_Map">
+        select  <if test="distinct !=null">${distinct}</if>
+        <choose>
+            <when test="resultColumn!=null">${resultColumn}</when>
+            <otherwise>
+        <include refid="user_Column" /> 
+            </otherwise>
+        </choose>
+        from user
+        <choose>
+            <when test="rowSize ==null">
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+            </when>
+            <otherwise>
+                inner join
+                (
+                SELECT id as primary_key FROM user
+                <if test="require!=null">
+                    <include refid="Assist" />
+                </if>
+                <if test="order !=null">${order}</if>
+                <choose>
+                    <when test="startRow !=null and rowSize !=null">LIMIT #{startRow,jdbcType=INTEGER},#{rowSize,jdbcType=INTEGER} </when>
+                    <when test="rowSize !=null">LIMIT #{rowSize,jdbcType=INTEGER}</when>
+                 </choose>
+                 ) as tmp
+                 on tmp.primary_key=user.id
+            </otherwise>
+        </choose>
+    </select> 
+
+    <!-- 获得一个User对象,以参数User对象中不为空的属性作为条件进行查询-->
+    <select id="selectUserByObj" parameterType="com.kami.blog.model.User" resultMap="result_User_Map">
+        select 
+            <include refid="user_Column" /> 
+        from user
+        <where>
+            <if test="introduction != null "> and user.introduction = #{introduction,jdbcType=VARCHAR}</if>
+            <if test="email != null "> and user.email = #{email,jdbcType=VARCHAR}</if>
+            <if test="active != null "> and user.active = #{active,jdbcType=TINYINT}</if>
+            <if test="admin != null "> and user.admin = #{admin,jdbcType=TINYINT}</if>
+            <if test="black != null "> and user.black = #{black,jdbcType=TINYINT}</if>
+            <if test="name != null "> and user.name = #{name,jdbcType=VARCHAR}</if>
+            <if test="createTime != null "> and user.createTime = #{createTime,jdbcType=DATE}</if>
+            <if test="headImg != null "> and user.headImg = #{headImg,jdbcType=VARCHAR}</if>
+            <if test="password != null "> and user.password = #{password,jdbcType=VARCHAR}</if>
+            <if test="id != null "> and user.id = #{id,jdbcType=VARCHAR}</if>
+        </where>
+    </select> 
+
+    <!-- 通过User的id获得对应数据库中表的数据对象-->
+    <select id="selectUserById" parameterType="java.lang.String" resultMap="result_User_Map">
+        select 
+            <include refid="user_Column" /> 
+        from user
+        where user.id = #{id,jdbcType=VARCHAR}
+    </select> 
+
+    <!-- 将User插入到对应数据库的表中,包括属性值为null的数据-->
+
+    <insert id="insertUser" parameterType="com.kami.blog.model.User">
+        insert into user(id,password,headImg,createTime,name,black,admin,active,email,introduction) 
+        values(#{id,jdbcType=VARCHAR},#{password,jdbcType=VARCHAR},#{headImg,jdbcType=VARCHAR},#{createTime,jdbcType=DATE},#{name,jdbcType=VARCHAR},#{black,jdbcType=TINYINT},#{admin,jdbcType=TINYINT},#{active,jdbcType=TINYINT},#{email,jdbcType=VARCHAR},#{introduction,jdbcType=VARCHAR})
+    </insert>
+
+    <!-- 将User中属性值不为null的数据,插入到对应数据库的表中-->
+    <insert id="insertNonEmptyUser" parameterType="com.kami.blog.model.User">
+        insert into user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="password != null">password,</if>
+            <if test="headImg != null">headImg,</if>
+            <if test="createTime != null">createTime,</if>
+            <if test="name != null">name,</if>
+            <if test="black != null">black,</if>
+            <if test="admin != null">admin,</if>
+            <if test="active != null">active,</if>
+            <if test="email != null">email,</if>
+            <if test="introduction != null">introduction,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null"> #{id,jdbcType=VARCHAR},</if>
+            <if test="password != null"> #{password,jdbcType=VARCHAR},</if>
+            <if test="headImg != null"> #{headImg,jdbcType=VARCHAR},</if>
+            <if test="createTime != null"> #{createTime,jdbcType=DATE},</if>
+            <if test="name != null"> #{name,jdbcType=VARCHAR},</if>
+            <if test="black != null"> #{black,jdbcType=TINYINT},</if>
+            <if test="admin != null"> #{admin,jdbcType=TINYINT},</if>
+            <if test="active != null"> #{active,jdbcType=TINYINT},</if>
+            <if test="email != null"> #{email,jdbcType=VARCHAR},</if>
+            <if test="introduction != null"> #{introduction,jdbcType=VARCHAR},</if>
+        </trim>
+    </insert>
+
+    <!-- 将User批量插入到对应数据库的表中-->
+    <insert id="insertUserByBatch" parameterType="ArrayList">
+        insert into user(id,password,headImg,createTime,name,black,admin,active,email,introduction) values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.id,jdbcType=VARCHAR},#{item.password,jdbcType=VARCHAR},#{item.headImg,jdbcType=VARCHAR},#{item.createTime,jdbcType=DATE},#{item.name,jdbcType=VARCHAR},#{item.black,jdbcType=TINYINT},#{item.admin,jdbcType=TINYINT},#{item.active,jdbcType=TINYINT},#{item.email,jdbcType=VARCHAR},#{item.introduction,jdbcType=VARCHAR})
+        </foreach>
+    </insert>
+
+    <!-- 通过User的id将数据库表中对应的数据删除-->
+    <delete id="deleteUserById" parameterType="java.lang.String">
+        delete from user
+        where id = #{id,jdbcType=VARCHAR}
+    </delete>
+
+    <!-- 通过辅助工具Assist中的条件将User对应的数据库表的数据删除-->
+    <delete id="deleteUser" parameterType="com.kami.blog.common.Assist">
+        delete from user
+        <if test="require!=null"><include refid="Assist" /></if>
+    </delete>
+
+    <!-- 通过User的id将User的数据更新到数据库中对应的表,包括值null的数据-->
+    <update id="updateUserById" parameterType="com.kami.blog.model.User">
+        update user set
+            password=#{password,jdbcType=VARCHAR}
+            ,headImg=#{headImg,jdbcType=VARCHAR}
+            ,createTime=#{createTime,jdbcType=DATE}
+            ,name=#{name,jdbcType=VARCHAR}
+            ,black=#{black,jdbcType=TINYINT}
+            ,admin=#{admin,jdbcType=TINYINT}
+            ,active=#{active,jdbcType=TINYINT}
+            ,email=#{email,jdbcType=VARCHAR}
+            ,introduction=#{introduction,jdbcType=VARCHAR}
+        where id=#{id,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 通过User的id将User中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyUserById" parameterType="com.kami.blog.model.User">
+        update user
+        <set>
+            <if test="password != null">
+                password=#{password,jdbcType=VARCHAR},
+            </if>
+            <if test="headImg != null">
+                headImg=#{headImg,jdbcType=VARCHAR},
+            </if>
+            <if test="createTime != null">
+                createTime=#{createTime,jdbcType=DATE},
+            </if>
+            <if test="name != null">
+                name=#{name,jdbcType=VARCHAR},
+            </if>
+            <if test="black != null">
+                black=#{black,jdbcType=TINYINT},
+            </if>
+            <if test="admin != null">
+                admin=#{admin,jdbcType=TINYINT},
+            </if>
+            <if test="active != null">
+                active=#{active,jdbcType=TINYINT},
+            </if>
+            <if test="email != null">
+                email=#{email,jdbcType=VARCHAR},
+            </if>
+            <if test="introduction != null">
+                introduction=#{introduction,jdbcType=VARCHAR},
+            </if>
+        </set>
+        where id=#{id,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将User中的数据更新到数据库对应的表中,包括值为null的数据-->
+    <update id="updateUser" parameterType="map">
+        update user
+        <set>
+                id=#{enti.id,jdbcType=VARCHAR},
+                password=#{enti.password,jdbcType=VARCHAR},
+                headImg=#{enti.headImg,jdbcType=VARCHAR},
+                createTime=#{enti.createTime,jdbcType=DATE},
+                name=#{enti.name,jdbcType=VARCHAR},
+                black=#{enti.black,jdbcType=TINYINT},
+                admin=#{enti.admin,jdbcType=TINYINT},
+                active=#{enti.active,jdbcType=TINYINT},
+                email=#{enti.email,jdbcType=VARCHAR},
+                introduction=#{enti.introduction,jdbcType=VARCHAR},
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+    <!-- 通过辅助工具Assist中的条件将User中属性值不为null的数据更新到数据库对应的表中-->
+    <update id="updateNonEmptyUser" parameterType="map">
+        update user
+        <set>
+            <if test="enti.id != null">
+                id=#{enti.id,jdbcType=VARCHAR},
+            </if>
+            <if test="enti.password != null">
+                password=#{enti.password,jdbcType=VARCHAR},
+            </if>
+            <if test="enti.headImg != null">
+                headImg=#{enti.headImg,jdbcType=VARCHAR},
+            </if>
+            <if test="enti.createTime != null">
+                createTime=#{enti.createTime,jdbcType=DATE},
+            </if>
+            <if test="enti.name != null">
+                name=#{enti.name,jdbcType=VARCHAR},
+            </if>
+            <if test="enti.black != null">
+                black=#{enti.black,jdbcType=TINYINT},
+            </if>
+            <if test="enti.admin != null">
+                admin=#{enti.admin,jdbcType=TINYINT},
+            </if>
+            <if test="enti.active != null">
+                active=#{enti.active,jdbcType=TINYINT},
+            </if>
+            <if test="enti.email != null">
+                email=#{enti.email,jdbcType=VARCHAR},
+            </if>
+            <if test="enti.introduction != null">
+                introduction=#{enti.introduction,jdbcType=VARCHAR},
+            </if>
+        </set>
+        <if test="assist.require!=null"><include refid="updateAssist" /></if>
+    </update>
+
+</mapper>
