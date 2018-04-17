@@ -119,6 +119,9 @@ $(function () {
                     type:'post',
                     data: {
                     	"id" : data.id,
+                    	"title": data.title,
+                    	"content":data.content,
+                    	"topic":data.topic,
                     	"del" : false
                     },
                     dataType: "json",

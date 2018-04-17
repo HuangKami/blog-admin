@@ -2,6 +2,8 @@ package com.kami.blog.controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
@@ -24,6 +26,7 @@ public class SSOController {
 		User user = redisTemplate.opsForValue().get(token);
 		if(user != null) {
 			SessionHelper.setAttribute(request, KeyHelper.USER, user);
+			SecurityUtils.getSubject().login(new UsernamePasswordToken(user.getName(), user.getPassword()));  
 		}
 		return "redirect:main";
 	}
